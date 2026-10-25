@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "1.10"
+          - "1"        # latest stable
+        os:
+          - ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+
+      - uses: julia-actions/cache@v2
+
+      - uses: julia-actions/julia-buildpkg@v1
+
+      - uses: julia-actions/julia-runtest@v1
+        env:
+          # Signed-endpoint tests are skipped when these secrets are absent.
+          # Add them in the repo's Settings → Secrets → Actions to enable.
+          OKX_API_KEY:    ${{ secrets.OKX_API_KEY }}
+          OKX_SECRET_KEY: ${{ secrets.OKX_SECRET_KEY }}
+          OKX_PASSPHRASE: ${{ secrets.OKX_PASSPHRASE }}
