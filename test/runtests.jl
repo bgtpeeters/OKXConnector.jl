@@ -264,6 +264,21 @@ end
     @test parse(Float64, t["last"]) > 0
 end
 
+@skipable_testset "orderbook — BTC-USDT 5 levels" begin
+    client = OKXClient()
+    book = orderbook(client, "BTC-USDT"; depth=5)
+    @test book.asks isa DataFrame
+    @test book.bids isa DataFrame
+    @test names(book.asks) == ["price", "size", "orders"]
+    @test 1 <= nrow(book.asks) <= 5
+    @test 1 <= nrow(book.bids) <= 5
+    @test issorted(book.asks.price)
+    @test issorted(book.bids.price; rev=true)
+    @test book.bids.price[1] < book.asks.price[1]
+    @test all(book.asks.size .> 0)
+    @test book.ts isa DateTime
+end
+
 @skipable_testset "instruments — single SPOT instrument" begin
     client = OKXClient()
     info = instruments(client; instType="SPOT", instId="BTC-USDT")

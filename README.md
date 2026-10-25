@@ -39,6 +39,9 @@ df = candles(client, "BTC-USDT", "1H"; limit=100)
 # Latest 24-hour ticker
 t = ticker(client, "BTC-USDT")
 
+# Order book — asks/bids DataFrames, best price first
+book = orderbook(client, "BTC-USDT"; depth=20)
+
 # Instrument trading rules
 info = instruments(client; instType="SPOT", instId="BTC-USDT")
 ```
@@ -149,6 +152,18 @@ ticker(client, instId)
 Returns a `Dict` with the latest 24-hour ticker for the instrument. Key
 fields include `"instId"`, `"last"`, `"askPx"`, `"bidPx"`, `"open24h"`,
 `"high24h"`, `"low24h"`, `"vol24h"`, `"volCcy24h"`, `"ts"`.
+
+### `orderbook`
+
+```julia
+book = orderbook(client, instId;
+    depth = nothing,   # levels per side, max 400, default 1
+)
+```
+
+Returns a `NamedTuple` `(asks, bids, ts)`. `asks` and `bids` are
+`DataFrame`s with columns `price`, `size`, `orders`, best price first;
+`ts` is the snapshot time as a UTC `DateTime`.
 
 ### `instruments`
 

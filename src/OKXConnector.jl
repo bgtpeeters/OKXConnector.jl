@@ -75,6 +75,7 @@ export OKXError
 export candles
 export history_candles
 export ticker
+export orderbook
 export instruments
 export balance
 export place_order

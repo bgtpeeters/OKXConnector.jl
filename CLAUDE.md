@@ -57,7 +57,7 @@ gated on environment variables and skip gracefully (via `@test true` / `@info`) 
 CI passes the three `OKX_*` credentials from repo secrets but never sets `OKX_DEMO`, so `place_order`
 never runs in CI.
 
-Public integration tests (`candles`, `ticker`, `instruments`, etc.) are wrapped in the
+Public integration tests (`candles`, `ticker`, `orderbook`, `instruments`, etc.) are wrapped in the
 `@skipable_testset` macro (defined at the top of `test/runtests.jl`), which turns OKX geo-restriction
 errors (msg containing "restricted"/"not available", or code `"50110"`) into a skipped/broken test
 rather than a CI failure, since OKX blocks some endpoints by requester region.
@@ -71,7 +71,7 @@ matters and mirrors the dependency chain:
 client.jl              → OKXClient struct, OKXError
 auth.jl                → request signing (needs OKXClient)
 http.jl                → _public_get / _signed_get / _signed_post (needs auth.jl + OKXError)
-endpoints/market.jl     → candles, history_candles, ticker, instruments (public, uses http.jl)
+endpoints/market.jl     → candles, history_candles, ticker, orderbook, instruments (public, uses http.jl)
 endpoints/account.jl    → balance, place_order (signed, uses http.jl + calls instruments() for precision)
 ```
 

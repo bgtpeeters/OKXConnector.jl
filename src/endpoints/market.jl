@@ -4,6 +4,7 @@
 #   candles(client, instId, bar; kwargs...)          GET /api/v5/market/candles
 #   history_candles(client, instId, bar; kwargs...)  GET /api/v5/market/history-candles
 #   ticker(client, instId)                           GET /api/v5/market/ticker
+#   orderbook(client, instId; depth)                 GET /api/v5/market/books
 #   instruments(client; instType, ...)               GET /api/v5/public/instruments
 # ---------------------------------------------------------------------------
 
@@ -216,6 +217,70 @@ function ticker(client::OKXClient, instId::String)::Dict
         return _json3_to_dict(raw[1])
     end
     return _json3_to_dict(raw)
+end
+
+# ---------------------------------------------------------------------------
+# orderbook
+# ---------------------------------------------------------------------------
+
+# Internal — convert OKX book levels ([px, sz, deprecated, numOrders], each
+# value a string) into a 3-column DataFrame, keeping OKX's level order.
+function _book_side_to_dataframe(levels)::DataFrame
+    n = length(levels)
+    price  = Vector{Float64}(undef, n)
+    size   = Vector{Float64}(undef, n)
+    orders = Vector{Int}(undef,     n)
+
+    for (i, level) in enumerate(levels)
+        price[i]  = parse(Float64, String(level[1]))
+        size[i]   = parse(Float64, String(level[2]))
+        orders[i] = parse(Int,     String(level[4]))
+    end
+
+    return DataFrame(price = price, size = size, orders = orders)
+end
+
+"""
+    orderbook(client, instId; depth) -> NamedTuple
+
+Return the current order book for `instId`.
+
+Calls `GET /api/v5/market/books` and returns `(asks, bids, ts)`:
+- `asks::DataFrame` — best (lowest) price first.
+- `bids::DataFrame` — best (highest) price first.
+- `ts::DateTime`    — book snapshot time (UTC).
+
+Each side has columns `price`, `size` (in the base currency for spot) and
+`orders` (number of orders at that level). Either side may be empty for an
+illiquid instrument.
+
+# Keyword Arguments
+- `depth::Union{Int,Nothing}` — Levels per side (OKX `sz`), max 400,
+  default 1.
+
+# Example
+
+    client = OKXClient()
+    book = orderbook(client, "BTC-USDT"; depth=20)
+    spread = book.asks.price[1] - book.bids.price[1]
+"""
+function orderbook(
+    client ::OKXClient,
+    instId ::String;
+    depth  ::Union{Int,Nothing} = nothing,
+)::NamedTuple
+    params = Dict{String,Any}("instId" => instId)
+    depth !== nothing && (params["sz"] = depth)
+
+    raw  = _public_get(client, "/api/v5/market/books"; params=params)
+    # OKX returns `data` as a single-element array.
+    book = raw[1]
+
+    return (
+        asks = _book_side_to_dataframe(book[:asks]),
+        bids = _book_side_to_dataframe(book[:bids]),
+        ts   = unix2datetime(parse(Int64, String(book[:ts])) / 1000),
+    )
 end
 
 # ---------------------------------------------------------------------------
